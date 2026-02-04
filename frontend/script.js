@@ -1,90 +1,11 @@
-/*const movies = [
-    {
-        title: "Avatar: El Sentido del Agua",
-        category: "Ciencia Ficción, Acción",
-        image: "https://lumiere-a.akamaihd.net/v1/images/image_ccdd5962.jpeg",
-        year: 2022,
-        type: "new"
-    },
-    {
-        title: "Encanto",
-        category: "Animación, Fantasía",
-        image: "https://lumiere-a.akamaihd.net/v1/images/p_encanto_homeent_22359_4892ae1c.jpeg",
-        year: 2021,
-        type: "recommended"
-    },
-    {
-        title: "Black Panther: Wakanda Forever",
-        category: "Acción, Aventura",
-        image: "https://pics.filmaffinity.com/Black_Panther_Wakanda_Forever-869269163-large.jpg",
-        year: 2022,
-        type: "new"
-    },
-    {
-        title: "The Mandalorian",
-        category: "Ciencia Ficción",
-        image: "https://pics.filmaffinity.com/The_Mandalorian_Serie_de_TV-526462730-large.jpg",
-        year: 2023,
-        type: "recommended"
-    },
-    {
-        title: "Enredados",
-        category: "Animación",
-        image: "https://www.aceprensa.com/wp-content/uploads/2011/01/38757-0.jpg",
-        year: 2010,
-        type: "recommended"
-    },
-    {
-        title: "Doctor Strange: Multiverse of Madness",
-        category: "Fantasía, Acción",
-        image: "https://sm.ign.com/ign_es/movie/d/doctor-str/doctor-strange-in-the-multiverse-of-madness_4pjr.jpg",
-        year: 2022,
-        type: "new"
-    },
-    {
-        title: "Lightyear",
-        category: "Animación, Aventura",
-        image: "https://play-lh.googleusercontent.com/PKFoGvETaFE2P3rFnSR6QkyA1RaZL0LneVAlq5FpNG9R2h9YMyvAcp0iV4ayIVYPOSAJI5aINSndeSwGqLQ",
-        year: 2022,
-        type: "recommended"
-    },
-    {
-        title: "Spider-Man: No Way Home",
-        category: "Acción, Comedia",
-        image: "https://pics.filmaffinity.com/Spider_Man_No_Way_Home-387287198-large.jpg",
-        year: 2021,
-        type: "new"
-    },
-    {
-        title: "Luca",
-        category: "Animación, Comedia",
-        image: "https://www.aceprensa.com/wp-content/uploads/2021/06/Cartel-Luca.jpg",
-        year: 2021,
-        type: "recommended"
-    },
-    {
-        title: "Cruella",
-        category: "Comedia, Crimen",
-        image: "https://lumiere-a.akamaihd.net/v1/images/p_cruella_21672_ba40c762.jpeg",
-        year: 2021,
-        type: "recommended"
-    },
-    {
-        title: "Soul",
-        category: "Animación, Fantasía",
-        image: "https://lumiere-a.akamaihd.net/v1/images/p_soul_disneyplus_v2_20907_764da65d.jpeg",
-        year: 2020,
-        type: "recommended"
-    },
-    {
-        title: "Raya y el Último Dragón",
-        category: "Animación, Aventura",
-        image: "https://lumiere-a.akamaihd.net/v1/images/p_rayaandthelastdragon_21294_83346778.jpeg",
-        year: 2021,
-        type: "recommended"
-    }
-]; */
-const movies = [];
+/* (sample data removed) */
+let movies = []; // Will be fetched from the backend
+
+// Backends to try (local first, then remote tunnel)
+const BACKEND_URLS = [
+    'http://localhost:3000',
+    'https://cfzqbt9r-3000.uks1.devtunnels.ms'
+];
 // Estado de los carruseles (posición actual de scroll)
 const carouselState = {
     'recommended-track': 0,
@@ -177,7 +98,8 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 });
 
 // Inicializar
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await fetchMovies();
     loadAllMovies();
     initHeroSlider();
     checkBackendConnection();
@@ -193,38 +115,67 @@ async function checkBackendConnection() {
     }
 }
 
+// Try to fetch /api/movies from backend(s) and populate the `movies` array
+async function fetchMovies() {
+    const urls = BACKEND_URLS.map(u => `${u}/api/movies`);
+    for (const url of urls) {
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Network response not ok');
+            const data = await res.json();
+            if (data?.movies) {
+                movies = data.movies;
+                console.log('Movies loaded from', url);
+                return;
+            } else if (Array.isArray(data)) {
+                movies = data;
+                console.log('Movies loaded (array) from', url);
+                return;
+            }
+        } catch (e) {
+            console.warn('Failed to fetch movies from', url, e);
+        }
+    }
+    console.error('No backend reachable, leaving movies empty');
+    movies = [];
+}
+
 /* --- Hero Slider Logic --- */
 let currentHeroIndex = 0;
 let heroInterval;
-const heroMovies = movies.filter(m => m.type === 'new' || m.year >= 2022).slice(0, 5); // Select top 5 new movies
 
 function initHeroSlider() {
     const sliderContainer = document.getElementById('hero-slider');
     if (!sliderContainer) return;
 
-    // Generate slides
-    sliderContainer.innerHTML = heroMovies.map((movie, index) => {
-        return `
-            <div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
-                <!-- Blurred Background Layer -->
-                <div class="hero-bg-blur" style="background-image: url('${movie.image}')"></div>
-                
-                <div class="container hero-content-inner">
-                    <div class="hero-text">
-                        <h2 class="hero-title">${movie.title}</h2>
-                        <span class="hero-subtitle mb-3 d-block">${movie.year} • ${movie.category}</span>
-                        <div class="hero-buttons">
-                            <a href="details.html" class="primary-button">VER AHORA</a>
-                            <a href="#" class="secondary-button">TRÁILER</a>
+    // Generate slides (select top 5 new / recent movies)
+    const heroMovies = movies.filter(m => m && (m.type === 'new' || (m.year && m.year >= 2022))).slice(0, 5);
+    if (heroMovies.length === 0) {
+        sliderContainer.innerHTML = '<p class="no-hero">No hay elementos para el slider</p>';
+    } else {
+        sliderContainer.innerHTML = heroMovies.map((movie, index) => {
+            return `
+                <div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
+                    <!-- Blurred Background Layer -->
+                    <div class="hero-bg-blur" style="background-image: url('${movie.image}')"></div>
+                    
+                    <div class="container hero-content-inner">
+                        <div class="hero-text">
+                            <h2 class="hero-title">${movie.title}</h2>
+                            <span class="hero-subtitle mb-3 d-block">${movie.year} • ${movie.category}</span>
+                            <div class="hero-buttons">
+                                <a href="details.html" class="primary-button">VER AHORA</a>
+                                <a href="#" class="secondary-button">TRÁILER</a>
+                            </div>
+                        </div>
+                        <div class="hero-poster-container">
+                            <img src="${movie.image}" alt="${movie.title}" class="hero-floating-poster">
                         </div>
                     </div>
-                    <div class="hero-poster-container">
-                        <img src="${movie.image}" alt="${movie.title}" class="hero-floating-poster">
-                    </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }
 
     // Controls
     document.getElementById('hero-prev')?.addEventListener('click', () => changeHeroSlide(-1));
